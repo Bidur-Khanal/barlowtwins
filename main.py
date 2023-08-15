@@ -21,7 +21,7 @@ import torch
 import torchvision
 import torchvision.transforms as transforms
 from custom_datasets import custom_COVID19_Xray_faster, custom_histopathology_faster
-#import neptune as neptune
+import neptune as neptune
 from utils import save_checkpoint
 
 parser = argparse.ArgumentParser(description='Barlow Twins Training')
@@ -29,12 +29,13 @@ parser.add_argument('data', type=Path, metavar='DIR',
                     help='path to dataset')
 parser.add_argument('--dataset-name', default='stl10',
                     help='dataset name', choices=['stl10', 'cifar10','COVID19_Xray','histopathology'])
-parser.add_argument('--workers', default=8, type=int, metavar='N',
+parser.add_argument('--workers', default=4, type=int, metavar='N',
                     help='number of data loader workers')
-parser.add_argument('--epochs', default=100, type=int, metavar='N',
+parser.add_argument('--epochs', default=200, type=int, metavar='N',
                     help='number of total epochs to run')
-parser.add_argument('--batch-size', default=512, type=int, metavar='N',
-                    help='mini-batch size')
+parser.add_argument('-b', '--batch-size', default=512, type=int,
+                    metavar='N',
+                    help='mini-batch size (default: 512), this is the total')
 parser.add_argument('--learning-rate-weights', default=0.2, type=float, metavar='LR',
                     help='base learning rate for weights')
 parser.add_argument('--learning-rate-biases', default=0.0048, type=float, metavar='LR',
@@ -48,14 +49,16 @@ parser.add_argument('--projector', default='8192-8192-8192', type=str,
 parser.add_argument('--print-freq', default=100, type=int, metavar='N',
                     help='print frequency')
 parser.add_argument('--save_dir', default='checkpoints', type= str)
+parser.add_argument('--checkpoint-dir', default='./checkpoints/', type=Path,
+                    metavar='DIR', help='path to checkpoint directory')
 parser.add_argument('--version', default = "1", type = str)
 
 
 def main():
-    args = parser.parse_args()
+    #args = parser.parse_args()
 
-    # run_id = run["sys/id"].fetch()
-    # args.run_id = run_id
+    run_id = run["sys/id"].fetch()
+    args.run_id = run_id
 
 
 
@@ -111,6 +114,8 @@ def main_worker(gpu, args):
                      weight_decay_filter=True,
                      lars_adaptation_filter=True)
 
+    print (model)
+
     # # automatically resume from checkpoint if it exists
     # if (args.checkpoint_dir / 'checkpoint.pth').is_file():
     #     ckpt = torch.load(args.checkpoint_dir / 'checkpoint.pth',
@@ -160,10 +165,12 @@ def main_worker(gpu, args):
                                  time=int(time.time() - start_time))
                     print(json.dumps(stats))
                     print(json.dumps(stats), file=stats_file)
-
-                    #run["train/loss"].log(loss.item())
+                    run = neptune.init_run(capture_stdout=False,
+                            capture_stderr=False,
+                            capture_hardware_metrics=False,project="bidur/covid-19-histopathology-barlowtwin",with_id=args.run_id,api_token="eyJhcGlfYWRkcmVzcyI6Imh0dHBzOi8vYXBwLm5lcHR1bmUuYWkiLCJhcGlfdXJsIjoiaHR0cHM6Ly9hcHAubmVwdHVuZS5haSIsImFwaV9rZXkiOiIxM2NkY2I5MC01OGUzLTQzZWEtODYzYi01YTZiYmFjZmM4NmIifQ==",)
+                    run["train/loss"].log(loss.item())
                     
-        if args.rank == 0:
+        if ((args.rank == 0) and ((epoch+1)%50 == 0)):
             # # save checkpoint
             # state = dict(epoch=epoch + 1, model=model.state_dict(),
             #              optimizer=optimizer.state_dict())
@@ -171,19 +178,18 @@ def main_worker(gpu, args):
 
 
             ### save model checkpoints
-            checkpoint_name = args.arch+"_barlowtwin_"+'lr_'+str(args.lr)+'_batch_size_'+str(args.batch_size)+'_epoch_'+str(epoch)+'_version_'+args.version+'_checkpoint.pth.tar'
+            checkpoint_name = "resnet18_barlowtwin_"+'lr_'+str(args.learning_rate_weights)+'_batch_size_'+str(args.batch_size)+'_epoch_'+str(epoch)+'_projector_'+str(args.projector)+'_version_'+args.version+'_checkpoint.pth.tar'
             if not os.path.exists(os.path.join(args.save_dir,args.dataset_name)):
                 os.makedirs(os.path.join(os.path.join(args.save_dir,args.dataset_name)))
 
             save_checkpoint({
                 'epoch': epoch,
-                'arch': args.arch,
-                'state_dict': model.state_dict(),
+                'arch': 'resnet18',
+                'state_dict': model.module.backbone.state_dict(),
                 'optimizer': optimizer.state_dict(),
             }, is_best=False, filename=os.path.join(args.save_dir,args.dataset_name,checkpoint_name))
             
-        else: 
-            print ("couldn't save!!!!!")
+        
 
     # if args.rank == 0:
     #     # save final model
@@ -369,14 +375,17 @@ class Transform:
 
 if __name__ == '__main__':
 
-    #     run = neptune.init_run(
-    #     project="bidur/covid-19-histopathology-barlowtwin",
-    #     api_token="eyJhcGlfYWRkcmVzcyI6Imh0dHBzOi8vYXBwLm5lcHR1bmUuYWkiLCJhcGlfdXJsIjoiaHR0cHM6Ly9hcHAubmVwdHVuZS5haSIsImFwaV9rZXkiOiIxM2NkY2I5MC01OGUzLTQzZWEtODYzYi01YTZiYmFjZmM4NmIifQ==",
-    # )  # your credentials
+    run = neptune.init_run(
+    capture_stdout=False,
+    capture_stderr=False,
+    capture_hardware_metrics=False,
+    project="bidur/covid-19-histopathology-barlowtwin",
+    api_token="eyJhcGlfYWRkcmVzcyI6Imh0dHBzOi8vYXBwLm5lcHR1bmUuYWkiLCJhcGlfdXJsIjoiaHR0cHM6Ly9hcHAubmVwdHVuZS5haSIsImFwaV9rZXkiOiIxM2NkY2I5MC01OGUzLTQzZWEtODYzYi01YTZiYmFjZmM4NmIifQ==",
+)  # your credentials
 
-    #     args = parser.parse_args()
-    #     params = vars(args)
-    #     run["parameters"] = params
-    #     run["all files"].upload_files("*.py")    
+    args = parser.parse_args()
+    params = vars(args)
+    run["parameters"] = params
+    run["all files"].upload_files("*.py")    
     
     main()
