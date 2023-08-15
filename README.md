@@ -31,10 +31,10 @@ PyTorch implementation of [Barlow Twins](https://arxiv.org/abs/2103.03230).
     <td>2048</td>
     <td>73.5%</td>
     <td>91.0%</td>
-    <td><a href="https://dl.fbaipublicfiles.com/barlowtwins/ep1000_bs2048_lrw0.2_lrb0.0048_lambd0.0051/resnet50.pth">ResNet-50</a></td>
-    <td><a href="https://dl.fbaipublicfiles.com/barlowtwins/ep1000_bs2048_lrw0.2_lrb0.0048_lambd0.0051/checkpoint.pth">full checkpoint</a></td>
-    <td><a href="https://dl.fbaipublicfiles.com/barlowtwins/ep1000_bs2048_lrw0.2_lrb0.0048_lambd0.0051/stats.txt">train logs</a></td>
-    <td><a href="https://dl.fbaipublicfiles.com/barlowtwins/ep1000_bs2048_lrw0.2_lrb0.0048_lambd0.0051/lincls_0.3/stats.txt">val logs</a></td>
+    <td><a href="https://dl.fbaipublicfiles.com/barlowtwins/ljng/resnet50.pth">ResNet-50</a></td>
+    <td><a href="https://dl.fbaipublicfiles.com/barlowtwins/ljng/checkpoint.pth">full checkpoint</a></td>
+    <td><a href="https://dl.fbaipublicfiles.com/barlowtwins/ljng/stats.txt">train logs</a></td>
+    <td><a href="https://dl.fbaipublicfiles.com/barlowtwins/ljng/cls_stats.txt">val logs</a></td>
   </tr>
 </table>
 
@@ -85,6 +85,8 @@ python evaluate.py /path/to/imagenet/ /path/to/checkpoint/resnet50.pth --weights
 https://github.com/yaohungt/Barlow-Twins-HSIC
 
 - A TensorFlow implementation of Barlow Twins on CIFAR-10, by Sayak Paul: https://github.com/sayakpaul/Barlow-Twins-TF
+
+- A recent work applying Barlow Twins to learn EEG signals, by Neeraj Wagh: https://github.com/neerajwagh/eeg-self-supervision
 
 *[Let us know](mailto:jzb@fb.com,ljng@fb.com,imisra@fb.com,yann@fb.com,sdeny@fb.com?subject=[GitHub]%20Barlow%20Twins%20) about all the cool stuff you are able to do with Barlow Twins so that we can advertise it here!*
 
