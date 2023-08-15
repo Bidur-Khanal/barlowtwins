@@ -20,15 +20,20 @@ from torch import nn, optim
 import torch
 import torchvision
 import torchvision.transforms as transforms
+from custom_datasets import custom_COVID19_Xray_faster, custom_histopathology_faster
+#import neptune as neptune
+from utils import save_checkpoint
 
 parser = argparse.ArgumentParser(description='Barlow Twins Training')
 parser.add_argument('data', type=Path, metavar='DIR',
                     help='path to dataset')
+parser.add_argument('--dataset-name', default='stl10',
+                    help='dataset name', choices=['stl10', 'cifar10','COVID19_Xray','histopathology'])
 parser.add_argument('--workers', default=8, type=int, metavar='N',
                     help='number of data loader workers')
-parser.add_argument('--epochs', default=1000, type=int, metavar='N',
+parser.add_argument('--epochs', default=100, type=int, metavar='N',
                     help='number of total epochs to run')
-parser.add_argument('--batch-size', default=2048, type=int, metavar='N',
+parser.add_argument('--batch-size', default=512, type=int, metavar='N',
                     help='mini-batch size')
 parser.add_argument('--learning-rate-weights', default=0.2, type=float, metavar='LR',
                     help='base learning rate for weights')
@@ -42,12 +47,18 @@ parser.add_argument('--projector', default='8192-8192-8192', type=str,
                     metavar='MLP', help='projector MLP')
 parser.add_argument('--print-freq', default=100, type=int, metavar='N',
                     help='print frequency')
-parser.add_argument('--checkpoint-dir', default='./checkpoint/', type=Path,
-                    metavar='DIR', help='path to checkpoint directory')
+parser.add_argument('--save_dir', default='checkpoints', type= str)
+parser.add_argument('--version', default = "1", type = str)
 
 
 def main():
     args = parser.parse_args()
+
+    # run_id = run["sys/id"].fetch()
+    # args.run_id = run_id
+
+
+
     args.ngpus_per_node = torch.cuda.device_count()
     if 'SLURM_JOB_ID' in os.environ:
         # single-node and multi-node distributed training on SLURM cluster
@@ -100,17 +111,25 @@ def main_worker(gpu, args):
                      weight_decay_filter=exclude_bias_and_norm,
                      lars_adaptation_filter=exclude_bias_and_norm)
 
-    # automatically resume from checkpoint if it exists
-    if (args.checkpoint_dir / 'checkpoint.pth').is_file():
-        ckpt = torch.load(args.checkpoint_dir / 'checkpoint.pth',
-                          map_location='cpu')
-        start_epoch = ckpt['epoch']
-        model.load_state_dict(ckpt['model'])
-        optimizer.load_state_dict(ckpt['optimizer'])
-    else:
-        start_epoch = 0
+    # # automatically resume from checkpoint if it exists
+    # if (args.checkpoint_dir / 'checkpoint.pth').is_file():
+    #     ckpt = torch.load(args.checkpoint_dir / 'checkpoint.pth',
+    #                       map_location='cpu')
+    #     start_epoch = ckpt['epoch']
+    #     model.load_state_dict(ckpt['model'])
+    #     optimizer.load_state_dict(ckpt['optimizer'])
+    # else:
+    #     start_epoch = 0
 
-    dataset = torchvision.datasets.ImageFolder(args.data / 'train', Transform())
+    start_epoch = 0
+
+    if args.dataset_name == "COVID19_Xray":
+        dataset = custom_COVID19_Xray_faster(args.data,train = True, transform = Transform())
+                                                   
+    elif args.dataset_name == "histopathology":
+        dataset = custom_histopathology_faster(args.data,train = True, transform = Transform())
+                                                   
+    #dataset = torchvision.datasets.ImageFolder(args.data / 'train', Transform())
     sampler = torch.utils.data.distributed.DistributedSampler(dataset)
     assert args.batch_size % args.world_size == 0
     per_device_batch_size = args.batch_size // args.world_size
@@ -141,15 +160,35 @@ def main_worker(gpu, args):
                                  time=int(time.time() - start_time))
                     print(json.dumps(stats))
                     print(json.dumps(stats), file=stats_file)
+
+                    #run["train/loss"].log(loss.item())
+                    
         if args.rank == 0:
-            # save checkpoint
-            state = dict(epoch=epoch + 1, model=model.state_dict(),
-                         optimizer=optimizer.state_dict())
-            torch.save(state, args.checkpoint_dir / 'checkpoint.pth')
-    if args.rank == 0:
-        # save final model
-        torch.save(model.module.backbone.state_dict(),
-                   args.checkpoint_dir / 'resnet50.pth')
+            # # save checkpoint
+            # state = dict(epoch=epoch + 1, model=model.state_dict(),
+            #              optimizer=optimizer.state_dict())
+            # torch.save(state, args.checkpoint_dir / 'checkpoint.pth')
+
+
+            ### save model checkpoints
+            checkpoint_name = args.arch+"_barlowtwin_"+'lr_'+str(args.lr)+'_batch_size_'+str(args.batch_size)+'_epoch_'+str(epoch)+'_version_'+args.version+'_checkpoint.pth.tar'
+            if not os.path.exists(os.path.join(args.save_dir,args.dataset_name)):
+                os.makedirs(os.path.join(os.path.join(args.save_dir,args.dataset_name)))
+
+            save_checkpoint({
+                'epoch': epoch,
+                'arch': args.arch,
+                'state_dict': model.state_dict(),
+                'optimizer': optimizer.state_dict(),
+            }, is_best=False, filename=os.path.join(args.save_dir,args.dataset_name,checkpoint_name))
+            
+        else: 
+            print ("couldn't save!!!!!")
+
+    # if args.rank == 0:
+    #     # save final model
+    #     torch.save(model.module.backbone.state_dict(),
+    #                args.checkpoint_dir / 'resnet50.pth')
 
 
 def adjust_learning_rate(args, optimizer, loader, step):
@@ -188,11 +227,13 @@ class BarlowTwins(nn.Module):
     def __init__(self, args):
         super().__init__()
         self.args = args
-        self.backbone = torchvision.models.resnet50(zero_init_residual=True)
+        #self.backbone = torchvision.models.resnet50(zero_init_residual=True)
+        self.backbone = torchvision.models.resnet18(zero_init_residual=True)
         self.backbone.fc = nn.Identity()
 
         # projector
-        sizes = [2048] + list(map(int, args.projector.split('-')))
+        # sizes = [2048] + list(map(int, args.projector.split('-')))
+        sizes = [512] + list(map(int, args.projector.split('-')))
         layers = []
         for i in range(len(sizes) - 2):
             layers.append(nn.Linear(sizes[i], sizes[i + 1], bias=False))
@@ -326,4 +367,15 @@ class Transform:
 
 
 if __name__ == '__main__':
+
+    #     run = neptune.init_run(
+    #     project="bidur/covid-19-histopathology-barlowtwin",
+    #     api_token="eyJhcGlfYWRkcmVzcyI6Imh0dHBzOi8vYXBwLm5lcHR1bmUuYWkiLCJhcGlfdXJsIjoiaHR0cHM6Ly9hcHAubmVwdHVuZS5haSIsImFwaV9rZXkiOiIxM2NkY2I5MC01OGUzLTQzZWEtODYzYi01YTZiYmFjZmM4NmIifQ==",
+    # )  # your credentials
+
+    #     args = parser.parse_args()
+    #     params = vars(args)
+    #     run["parameters"] = params
+    #     run["all files"].upload_files("*.py")    
+    
     main()
