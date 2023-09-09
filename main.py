@@ -20,7 +20,7 @@ from torch import nn, optim
 import torch
 import torchvision
 import torchvision.transforms as transforms
-from custom_datasets import custom_COVID19_Xray_faster, custom_histopathology_faster
+from custom_datasets import custom_COVID19_Xray_faster, custom_histopathology_faster, custom_dermnet_faster, custom_FETAL_PLANE_faster, MURA_faster
 import neptune as neptune
 from utils import save_checkpoint
 
@@ -28,7 +28,7 @@ parser = argparse.ArgumentParser(description='Barlow Twins Training')
 parser.add_argument('data', type=Path, metavar='DIR',
                     help='path to dataset')
 parser.add_argument('--dataset-name', default='stl10',
-                    help='dataset name', choices=['stl10', 'cifar10','COVID19_Xray','histopathology'])
+                    help='dataset name', choices=['stl10', 'cifar10','COVID19_Xray','histopathology','fetal','dermnet','mura'])
 parser.add_argument('--workers', default=4, type=int, metavar='N',
                     help='number of data loader workers')
 parser.add_argument('--epochs', default=200, type=int, metavar='N',
@@ -136,6 +136,15 @@ def main_worker(gpu, args):
                                                    
     elif args.dataset_name == "histopathology":
         dataset = custom_histopathology_faster(args.data,train = True, transform = Transform())
+
+    elif args.dataset_name == "fetal":
+        dataset = custom_FETAL_PLANE_faster(args.data,train = True, transform = Transform())
+
+    elif args.dataset_name == "dermnet":
+        dataset = custom_dermnet_faster(args.data,train = True, transform = Transform())
+
+    elif args.dataset_name == "mura":
+        dataset = MURA_faster(args.data,train = True, transform = Transform())
                                                    
     #dataset = torchvision.datasets.ImageFolder(args.data / 'train', Transform())
     sampler = torch.utils.data.distributed.DistributedSampler(dataset)
@@ -170,7 +179,7 @@ def main_worker(gpu, args):
                     print(json.dumps(stats), file=stats_file)
                     run = neptune.init_run(capture_stdout=False,
                             capture_stderr=False,
-                            capture_hardware_metrics=False,project="bidur/covid-19-histopathology-barlowtwin",with_id=args.run_id,api_token="eyJhcGlfYWRkcmVzcyI6Imh0dHBzOi8vYXBwLm5lcHR1bmUuYWkiLCJhcGlfdXJsIjoiaHR0cHM6Ly9hcHAubmVwdHVuZS5haSIsImFwaV9rZXkiOiIxM2NkY2I5MC01OGUzLTQzZWEtODYzYi01YTZiYmFjZmM4NmIifQ==",)
+                            capture_hardware_metrics=False,project="bidur/barlowtwin",with_id=args.run_id,api_token="eyJhcGlfYWRkcmVzcyI6Imh0dHBzOi8vYXBwLm5lcHR1bmUuYWkiLCJhcGlfdXJsIjoiaHR0cHM6Ly9hcHAubmVwdHVuZS5haSIsImFwaV9rZXkiOiIxM2NkY2I5MC01OGUzLTQzZWEtODYzYi01YTZiYmFjZmM4NmIifQ==",)
                     run["train/loss"].log(loss.item())
                     
         if ((args.rank == 0) and ((epoch+1)%50 == 0)):
@@ -382,7 +391,7 @@ if __name__ == '__main__':
     capture_stdout=False,
     capture_stderr=False,
     capture_hardware_metrics=False,
-    project="bidur/covid-19-histopathology-barlowtwin",
+    project="bidur/barlowtwin",
     api_token="eyJhcGlfYWRkcmVzcyI6Imh0dHBzOi8vYXBwLm5lcHR1bmUuYWkiLCJhcGlfdXJsIjoiaHR0cHM6Ly9hcHAubmVwdHVuZS5haSIsImFwaV9rZXkiOiIxM2NkY2I5MC01OGUzLTQzZWEtODYzYi01YTZiYmFjZmM4NmIifQ==",
 )  # your credentials
 

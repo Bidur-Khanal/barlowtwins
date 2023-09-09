@@ -224,5 +224,214 @@ class custom_histopathology_faster(data.Dataset):
         tmp = '    Target Transforms (if any): '
         fmt_str += '{0}{1}'.format(tmp, self.target_transform.__repr__().replace('\n', '\n' + ' ' * len(tmp)))
         return fmt_str
+    
+
+
+class custom_FETAL_PLANE_faster(data.Dataset):
+    """
+    Args:
+        root (string): Root directory path of dataset.
+        train (bool): load either training set (True) or test set (False) (default: True)
+        transform: A function/transform that takes in
+            a sample and returns a transformed version.
+            E.g, ``transforms.RandomCrop`` for images.
+        target_transform: A function/transform that takes
+            in the target and transforms it.
+     Attributes:
+        samples (list): List of (sample path, class_index) tuples
+        targets (list): The class_index value for each image in the dataset
+
+    """
+
+    def __init__(self, root = "data/", train=True, transform=None, target_transform=None, num_classes= 6, seed=1):  
+
+        self.root = root
+        self.as_rgb = True
+        if train:
+           self.mode = "train"
+        else:
+           self.mode = "valid"
+
+        with h5py.File(os.path.join(root,"Fetal_plane/", str(self.mode)+".hdf5"), 'r') as hf:
+            self.targets = hf["dataset"]["targets"][:]
+            self.images = hf["dataset"]["images"][:]
+
+        self.transform = transform
+        self.target_transform = target_transform
+        
+    def __getitem__(self, index):
+        """
+        Args:
+            index (int): Index
+        Returns:
+            tuple: (image, target) where target is class_index of the target class.
+        """
+
+        index = int(index)
+        image, target = self.images[index], self.targets[index]
+        image = Image.fromarray(image)
+
+        if self.as_rgb:
+            image = image.convert('RGB')
+
+        if self.transform is not None:
+            image = self.transform(image)
+        if self.target_transform is not None:
+            target = self.target_transform(target)
+
+        return image, target
+
+    def __len__(self):
+        return len(self.targets)
+
+    def __repr__(self):
+        fmt_str = 'Dataset ' + self.__class__.__name__ + '\n'
+        fmt_str += '    Number of datapoints: {}\n'.format(self.__len__())
+        fmt_str += '    Root Location: {}\n'.format(self.root)
+        tmp = '    Transforms (if any): '
+        fmt_str += '{0}{1}\n'.format(tmp, self.transform.__repr__().replace('\n', '\n' + ' ' * len(tmp)))
+        tmp = '    Target Transforms (if any): '
+        fmt_str += '{0}{1}'.format(tmp, self.target_transform.__repr__().replace('\n', '\n' + ' ' * len(tmp)))
+        return fmt_str
+
+class custom_dermnet_faster(data.Dataset):
+    """
+    Args:
+        root (string): Root directory path of dataset.
+        train (bool): load either training set (True) or test set (False) (default: True)
+        transform: A function/transform that takes in
+            a sample and returns a transformed version.
+            E.g, ``transforms.RandomCrop`` for images.
+        target_transform: A function/transform that takes
+            in the target and transforms it.
+     Attributes:
+        samples (list): List of (sample path, class_index) tuples
+        targets (list): The class_index value for each image in the dataset
+
+    """
+
+    def __init__(self, root = "data/", train=True, transform=None, target_transform=None, num_classes= 23, seed=1):
+
+        self.root = root
+        self.as_rgb = True
+        if train:
+           self.mode = "train"
+        else:
+           self.mode = "valid"
+
+        with h5py.File(os.path.join(root,"Dermnet/", str(self.mode)+".hdf5"), 'r') as hf:
+            self.targets = hf["dataset"]["targets"][:]
+            self.images = hf["dataset"]["images"][:]
+
+        self.transform = transform
+        self.target_transform = target_transform
+        
+    def __getitem__(self, index):
+        """
+        Args:
+            index (int): Index
+        Returns:
+            tuple: (image, target) where target is class_index of the target class.
+        """
+
+        index = int(index)
+        image, target = self.images[index], self.targets[index]
+        image = Image.fromarray(image)
+
+        if self.as_rgb:
+            image = image.convert('RGB')
+
+        if self.transform is not None:
+            image = self.transform(image)
+        if self.target_transform is not None:
+            target = self.target_transform(target)
+
+        
+        return image, target
+
+    def __len__(self):
+        return len(self.targets)
+
+    def __repr__(self):
+        fmt_str = 'Dataset ' + self.__class__.__name__ + '\n'
+        fmt_str += '    Number of datapoints: {}\n'.format(self.__len__())
+        fmt_str += '    Root Location: {}\n'.format(self.root)
+        tmp = '    Transforms (if any): '
+        fmt_str += '{0}{1}\n'.format(tmp, self.transform.__repr__().replace('\n', '\n' + ' ' * len(tmp)))
+        tmp = '    Target Transforms (if any): '
+        fmt_str += '{0}{1}'.format(tmp, self.target_transform.__repr__().replace('\n', '\n' + ' ' * len(tmp)))
+        return fmt_str
+    
+
+
+class MURA_faster(data.Dataset):
+    """
+    Args:
+        root (string): Root directory path of dataset.
+        train (bool): load either training set (True) or test set (False) (default: True)
+        transform: A function/transform that takes in
+            a sample and returns a transformed version.
+            E.g, ``transforms.RandomCrop`` for images.
+        target_transform: A function/transform that takes
+            in the target and transforms it.
+        seed: random seed for shuffling classes or instances (default=10)
+     Attributes:
+        samples (list): List of (sample path, class_index) tuples
+        targets (list): The class_index value for each image in the dataset
+    """
+
+    def __init__(self, root = "data/", train=True, transform=None, target_transform=None, num_classes= 7, seed=1):
+
+        self.root = root
+        self.as_rgb = True
+        if train:
+           self.mode = "train"
+        else:
+           self.mode = "valid"
+
+        with h5py.File(os.path.join(root,"MURA/", str(self.mode)+".hdf5"), 'r') as hf:
+            self.targets = hf["dataset"]["targets"][:]
+            self.images = hf["dataset"]["images"][:]
+
+        self.transform = transform
+        self.target_transform = target_transform
+        
+    def __getitem__(self, index):
+        """
+        Args:
+            index (int): Index
+        Returns:
+            tuple: (image, target) where target is class_index of the target class.
+        """
+
+        index = int(index)
+        image, target = self.images[index], self.targets[index]
+        image = Image.fromarray(image)
+
+        if self.as_rgb:
+            image = image.convert('RGB')
+
+        if self.transform is not None:
+            image = self.transform(image)
+        if self.target_transform is not None:
+            target = self.target_transform(target)
+
+        return image, target
+
+    def __len__(self):
+        return len(self.targets)
+
+    def __repr__(self):
+        fmt_str = 'Dataset ' + self.__class__.__name__ + '\n'
+        fmt_str += '    Number of datapoints: {}\n'.format(self.__len__())
+        fmt_str += '    Root Location: {}\n'.format(self.root)
+        tmp = '    Transforms (if any): '
+        fmt_str += '{0}{1}\n'.format(tmp, self.transform.__repr__().replace('\n', '\n' + ' ' * len(tmp)))
+        tmp = '    Target Transforms (if any): '
+        fmt_str += '{0}{1}'.format(tmp, self.target_transform.__repr__().replace('\n', '\n' + ' ' * len(tmp)))
+        return fmt_str
+
+
+
 
 
