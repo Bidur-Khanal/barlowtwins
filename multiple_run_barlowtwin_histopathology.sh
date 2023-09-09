@@ -21,6 +21,8 @@ do
                 export epochs;
                 export version;
                 export dataset;
+                export projector;
+                
                 sbatch -J $EXPT -o $STD -t 01-23:00:00 -e $ERR $job_File
             done;
         done;

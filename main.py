@@ -79,7 +79,10 @@ def main():
     else:
         # single-node distributed training
         args.rank = 0
-        args.dist_url = 'tcp://localhost:58472'
+        #args.dist_url = 'tcp://localhost:58472'
+        #args.dist_url =  'tcp://localhost:10001'
+        # args.dist_url =  'tcp://localhost:10002'
+        args.dist_url =  'tcp://localhost:10003'
         args.world_size = args.ngpus_per_node
     torch.multiprocessing.spawn(main_worker, (args,), args.ngpus_per_node)
 
