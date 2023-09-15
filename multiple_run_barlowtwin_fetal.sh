@@ -3,7 +3,7 @@
 dir="sbatch_log"
 job_File="sbatch_run.sh" 
 dataset=$"fetal"
-epochs=$"400"
+epochs=$"800"
 
 for projector in $"8192-8192-8192" #,$"4096-4096-4096"
 do
@@ -23,7 +23,7 @@ do
                 export dataset;
                 export projector;
 
-                sbatch -J $EXPT -o $STD -t 00-20:00:00 -e $ERR $job_File
+                sbatch -J $EXPT -o $STD -t 02-20:00:00 -e $ERR $job_File
             done;
         done;
     done;

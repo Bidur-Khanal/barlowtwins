@@ -182,7 +182,7 @@ def main_worker(gpu, args):
                             capture_hardware_metrics=False,project="bidur/barlowtwin",with_id=args.run_id,api_token="eyJhcGlfYWRkcmVzcyI6Imh0dHBzOi8vYXBwLm5lcHR1bmUuYWkiLCJhcGlfdXJsIjoiaHR0cHM6Ly9hcHAubmVwdHVuZS5haSIsImFwaV9rZXkiOiIxM2NkY2I5MC01OGUzLTQzZWEtODYzYi01YTZiYmFjZmM4NmIifQ==",)
                     run["train/loss"].log(loss.item())
                     
-        if ((args.rank == 0) and ((epoch+1)%50 == 0)):
+        if ((args.rank == 0) and ((epoch+1)%100 == 0)):
             # # save checkpoint
             # state = dict(epoch=epoch + 1, model=model.state_dict(),
             #              optimizer=optimizer.state_dict())
